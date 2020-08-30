@@ -5,7 +5,7 @@ const tradeScehma = new mongoose.Schema({
         type : String,
         required : true 
     },
-    buyPrice : {
+    avgBuyPrice : {
         type : Number,
         required : true,
         min:0

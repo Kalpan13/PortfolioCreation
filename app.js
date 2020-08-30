@@ -5,12 +5,14 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var swaggerUI = require('swagger-ui-express');
 var swaggerJsDoc = require('swagger-jsdoc');
-var trades = require('./routes/trades');
-var usersRouter = require('./routes/users');
-var tradesRouter = require('./routes/trades');
 var mongoose = require('mongoose');
 const dotenv = require('dotenv')
 dotenv.config();
+
+var usersRouter = require('./routes/users');
+var tradesRouter = require('./routes/trades');
+var holdingRouter = require('./routes/holdings');
+var returnRouter = require('./routes/returns');
 const port = process.env.PORT || 5000;
 const MONGO_URI=process.env.MONGO_URI;
 
@@ -29,6 +31,11 @@ const swaggerOptions = {
 },
   apis : ["app.js"]
 };
+
+// const parser = new SwaggerParser()
+// const apiDescription = await parser.validate('my-api.yml')
+// const connect = swaggerRoutes(api, apiDescription)
+
 
 //const swaggerDocs = swaggerJsDoc(swaggerOptions);
 var app = express();
@@ -52,6 +59,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // //app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/trades',tradesRouter);
+app.use('/holdings',holdingRouter);
+app.use('/returns',returnRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -66,7 +75,11 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+  res.json({
+    message: err.message,
+    error: err
+  });
+ // res.render('error');
 });
 
 app.listen(port, () => {
