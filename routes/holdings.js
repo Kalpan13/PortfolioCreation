@@ -1,22 +1,20 @@
 var express = require('express');
 var holdingRouter = express.Router();
-var Trade = require('../models/trade');
+var Holding = require('../models/holding');
 
 holdingRouter.route('/')
 .get((req,res,next) => {
-    var query = Trade.find({}).select('-_id ticker avgBuyPrice numShares');
-    query.exec((err,trades) => {
+    var query = Holding.find({}).select('-_id ticker avgBuyPrice numShares');
+    query.exec((err,holds) => {
         if(err)
         {
-           //console.log("Error while fetching trades "+err);
            res.statusCode=403;
            res.end("Error while fetching results from DB");
         }
         else {
-            console.log("Found some holdings");
-            console.log("Found Trades");
+            console.log("Found holds");
             res.statusCode=200;
-            res.json(trades);
+            res.json(holds);
         }
     })
 })

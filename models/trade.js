@@ -5,9 +5,8 @@ const tradeScehma = new mongoose.Schema({
         type : String,
         required : true 
     },
-    avgBuyPrice : {
+    buyPrice : {
         type : Number,
-        required : true,
         min:0
     },
     numShares : {
@@ -15,12 +14,15 @@ const tradeScehma = new mongoose.Schema({
         required : true,
         min : 1
     },
+    numSharesBought:{
+        type : Number,
+    },
     cName : {
         type : String 
     },
     operation: {
         type : String,
-        enum : ['buy','sell','change']
+        enum : ['buy','sell']
     }
 },{
     timestamps : true

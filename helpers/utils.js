@@ -12,10 +12,6 @@ function calculateAvgPrice(oldShares,oldPrice, newShares, newPrice)
 
 function calculateReturns(trades)
 {
-    console.log(trades);
-//    return trades.reduce((a, b) => {
-//         (constants.CURRENT_PRICE - a.avgBuyPrice)*a.numShares + (constants.CURRENT_PRICE - b.avgBuyPrice)*b.numShares 
-//     }, 0);
     var returns = 0;
     for(i=0;i<trades.length;i++)
     {
