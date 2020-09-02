@@ -72,12 +72,12 @@ tradeRouter.route('/')
     res.end('GET operation not supported on /trades/'+req.params.tradeID);
   })
   .post((req, res, next) => {
-    const tradeObj = req.body;
     const Ticker = req.params.tradeID;
 
+    const tradeObj = req.body;
     if (!tradeObj.operation) {
       res.statusCode = 403;
-      res.end('Operation must be defined in PUT /trade endpoint. (buy or sell)');
+      res.end('Operation must be defined in POST /trade endpoint. (buy or sell)');
     }
     if (tradeObj.operation == 'buy') {
       // Trades.findOne({'ticker': Ticker })
@@ -88,8 +88,8 @@ tradeRouter.route('/')
         // }
         // else {
           console.log('Trying to buy shares of'+Ticker);
-          const tradeObj = req.body;
 
+          // Creting tradeObj for insertion in DB
           tradeObj.numSharesBought = tradeObj.numShares;
           tradeObj.operation = "buy";
 
@@ -108,28 +108,32 @@ tradeRouter.route('/')
                   "numShares":tradeObj.numShares
                 }
                 Holdings.create(holding)
-                .then((holding)=>{console.log("Holding Created")})
-                .catch((err)=> {})
-              }
-              else {
-                holding.numShares = (tradeObj.numShares + holding.numShares);
-              }
-              holding.save((err) => {
-                if(err)
-                {
+                .then((newHolding)=>{console.log("Holding Created");})
+                .catch((err)=> {
                   res.statusCode = 402;
                   res.json({
                   message: err.message,
                   error: err
-                  })
-                }
-                else {
-                  //res.statusCode = 200;
-                  console.log("Holdings Created.")
-                }
-              });
-
-              },(err) => {
+                  });
+                });
+              }
+              else {
+                holding.numShares = (tradeObj.numShares + holding.numShares);
+                holding.save((err) => {
+                  if(err)
+                  {
+                    res.statusCode = 402;
+                    res.json({
+                    message: err.message,
+                    error: err
+                    })
+                  }
+                  else {
+                    console.log("Holdings Created.")
+                  }
+                });
+              }
+            },(err) => {
                   console.log("Error while searching Holding");
                   res.statusCode = 402;
                   res.json({
@@ -137,51 +141,85 @@ tradeRouter.route('/')
                   error: err
                   })
               })
-              .catch((err)=> {
-                console.log("Error while searching Holding in catch");
-                res.statusCode = 402;
-                res.json({
-                message: err.message,
-                error: err
-                })
-              }); 
-            
-              res.statusCode = 200;
+            .catch((err)=> {
+              console.log("Error while searching Holding in catch");
+              res.statusCode = 402;
               res.json({
-                message : `${trade.numShares} shares of ${trade.ticker} baught successfully..!`,
-                Trade : {
-                  "ticker":trade.ticker,
-                  "numShares":trade.numSharesBought,
-                  "buyPrice":trade.buyPrice
-                } 
-              });
+              message: err.message,
+              error: err
+              })
+            }); 
+            
+            res.statusCode = 200;
+            res.json({
+              message : `${trade.numShares} shares of ${trade.ticker} baught successfully..!`,
+              Trade : {
+                "ticker":trade.ticker,
+                "numShares":trade.numSharesBought,
+                "buyPrice":trade.buyPrice
+              } 
+            });
 
-            },err=> {
-
+            },(err)=> {
+              res.statusCode = 402;
+              res.json({
+              message: err.message,
+              error: err
+              })
             })
             .catch((err) => {
               res.statusCode = 402;
               res.json({
               message: err.message,
               error: err
-              })
+              });
             });
-
           }
-    
     else if (tradeObj.operation == 'sell') {
         
-      Trades.find({'ticker': Ticker })
-      .then((trade) => {
-        if(!trade || trade.length==0){
+      Holdings.findOne({'ticker': tradeObj.ticker})
+      .then((holding) => {
+        if(!holding){
           res.statusCode = 403;
-          res.end(`Add a trade of ${Ticker} before selling it. Use POST /trades..!`);
+          res.end(`Add a trade of "${tradeObj.ticker}" before selling it. Use POST /trades..!`);
         }
         else {
-
-        }
-      
-          // const tradeDict = {
+          if((holding.numShares - tradeObj.numShares) < 0)
+          {
+            res.statusCode = 403;
+            res.end(`Only ${holding.numShares} shares can be sold of ${tradeObj.ticker}..!`);
+          }
+          else if((holding.numShares - tradeObj.numShares) == 0)
+          {
+            Holdings.deleteOne({ticker:tradeObj.ticker})
+            .then((deleted) => {})
+            .catch((err) => {
+              res.statusCode = 402;
+              res.json({
+              message: err.message,
+              error: err
+              });
+            })
+          }
+          else {
+            holding.numShares = holding.numShares - tradeObj.numShares;
+            holding.save((err) => {
+              if (err) {
+                console.log(err);
+                res.statusCode = 403;
+                res.json({
+                  message: err.message,
+                  error: err
+                  });
+              }
+              else {
+                // res.statusCode = 200;
+                // res.send(`Holding Updated Successfully..!`);
+              }
+            });
+          }
+        }      
+        // const tradeDict = {
           //   "ticker": Ticker,
           //   "buyPrice": tradeObj.buyPrice,
           //   "numShares": tradeObj.numShares,
@@ -207,32 +245,59 @@ tradeRouter.route('/')
           //       error: err
           //     });
           //   })
+        
+        const sellObj = {
+          "ticker":tradeObj.ticker,
+          "numShares":tradeObj.numShares,
+          "operation":tradeObj.operation
+        }
+        Trades.create((sellObj))
+        .then((trade)=> {
+          res.statusCode = 200;
+          res.send(`${trade.numShares} shares of ${tradeObj.ticker} sold successfully..!`);
+        },(err)=> {
+          res.statusCode=403;
+          res.json({
+            message: err.message,
+            error: err
+            });
+        })
+        .catch((err)=> {
+          res.statusCode=403;
+          res.json({
+            message: err.message,
+            error: err
+            });
+        });
+
         });
       }
     
         else {
-          console.log('Trying to buy more shares of'+Ticker);
+          // console.log('Trying to buy more shares of'+Ticker);
 
-          const oldShares = trade.numShares;
-          const avgBuyPrice = trade.avgBuyPrice;
-          const buyShares = tradeObj.numShares;
-          const buyPrice = tradeObj.buyPrice;
+          // const oldShares = trade.numShares;
+          // const avgBuyPrice = trade.avgBuyPrice;
+          // const buyShares = tradeObj.numShares;
+          // const buyPrice = tradeObj.buyPrice;
 
-          const newTrade = utils.calculateAvgPrice(oldShares, avgBuyPrice, buyShares, buyPrice);
-          trade.avgBuyPrice = newTrade.newAvgBuyPrice;
-          trade.numShares = newTrade.newShares;
+          // const newTrade = utils.calculateAvgPrice(oldShares, avgBuyPrice, buyShares, buyPrice);
+          // trade.avgBuyPrice = newTrade.newAvgBuyPrice;
+          // trade.numShares = newTrade.newShares;
 
-          trade.save((err) => {
-            if (err) {
-              console.log(err);
-              res.statusCode = 403;
-              res.end(err);
-            }
-            else {
-              res.statusCode = 200;
-              res.send(`${buyShares} Shares of ${Ticker} baught successfully..!!`);
-            }
-          });  
+          // trade.save((err) => {
+          //   if (err) {
+          //     console.log(err);
+          //     res.statusCode = 403;
+          //     res.end(err);
+          //   }
+          //   else {
+          //     res.statusCode = 200;
+          //     res.send(`${buyShares} Shares of ${Ticker} baught successfully..!!`);
+          //   }
+          // });  
+          res.statusCode=403;
+          res.end("Option must be 'buy' or 'sell'");
         }
       })
     /*}
