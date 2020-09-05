@@ -315,20 +315,61 @@ tradeRouter.route("/:tradeID")
 	const tradeID = req.params.tradeID;
 	const updateObj = req.body;
 
-	//if(('ticker' in updateObj) && ('numShares' in updateObj )
-	Trades.findById(tradeID)
+  console.log("PUT request received");
+  
+  Trades.findById(tradeID)
 	.then((trade)=> {
-		for(key in updateObj)
-		{
-			if(key=='ticker')
-			{
-				if(trade[key]!=updateObj[key])
-				{
-					console.log("TIcker not matching");
-				}	
-			}
-		}
+    if(trade)
+    {
+      console.log(trade);
+      for(key in updateObj)
+		  {
+        console.log(key);
+        if(key=='ticker')
+        {
+          if(trade[key]!=updateObj[key])
+          {
+            console.log("TIcker not matching");
+          }
+          else {
+            res.end("Processing updated");
+          }	
+        }
+		  }
+    }
+		else {
+      res.end("No Trade found");
+    }
 	})
-
 })
+.delete((req,res,next) => {
+  const tradeID = req.params.tradeID;
+
+  Trades.findByIdAndRemove(tradeID)
+  .then((trade) => {
+    if(trade)
+    {
+      res.statusCode = 200;
+      res.end(`Trade with tradeID ${tradeID} removed successfully..!`);
+    }
+    else {
+      res.statusCode = 200;
+      res.end(`No trade Trade present with tradeID ${tradeID}.!`);
+    }
+  },(err) => {
+    res.statusCode = 403;
+    res.json({
+      message: err.message,
+      error: err,
+    });
+    })
+  .catch((err) => {
+    res.statusCode = 403;
+    res.json({
+      message: err.message,
+      error: err,
+    });
+  });
+})
+
 module.exports = tradeRouter;
