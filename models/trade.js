@@ -12,7 +12,11 @@ const tradeScehma = new mongoose.Schema({
     numShares : {
         type : Number,
         required : true,
-        min : 1
+        min : 1,
+        validate : {
+            validator : Number.isInteger,
+            message   : 'numShares must be an integer value. {VALUE} is not an integer.'
+          }
     },
     numSharesBought:{
         type : Number,
@@ -22,7 +26,7 @@ const tradeScehma = new mongoose.Schema({
     },
     operation: {
         type : String,
-        enum : ['buy','sell']
+        enum : ['buy','sell'],
     }
 },{
     timestamps : true

@@ -4,8 +4,7 @@ var Trades = require("../models/trade");
 var chalk = require("chalk");
 var utils = require("../helpers/utils");
 var Holdings = require("../models/holding");
-const e = require("express");
-const trades = require("../models/trade");
+
 // tradeRouter.route('/')
 //   .get((req, res, next) => {
 //     res.statusCode = 405;
@@ -70,18 +69,17 @@ const trades = require("../models/trade");
 tradeRouter.route("/")
   .get((req, res, next) => {
     Trades.find(({}))
-    .select('_id ticker numShares buyPrice operation')
-    .then((trades) => {
-      res.statusCode=200;
-      res.json({
-        trades : trades
-      });
-    })
-    .catch((err) => {
+      .select('_id ticker numShares buyPrice operation')
+      .then((trades) => {
+        res.statusCode = 200;
+        res.json({
+          trades: trades
+        });
+      })
+      .catch((err) => {
 
-    })
+      })
   })
-
   .post((req, res, next) => {
     const Ticker = req.params.tradeID;
 
@@ -97,57 +95,51 @@ tradeRouter.route("/")
 
       // Creting tradeObj for insertion in DB
       tradeObj.numSharesBought = tradeObj.numShares;
-      tradeObj.operation = "buy";
 
-      Trades.create(tradeObj)
-        .then(
-          (trade) => {
-            console.log(
-              chalk.green(
-                `${trade.numShares} shares of ${trade.ticker} baught successfully !!`
-              )
-            );
-
-            // Adding No. of Shares in Holdings
-            Holdings.findOne({ ticker: tradeObj.ticker })
-              .then(
-                (holding) => {
-                  if (!holding) {
-                    // If holding corresponding to the trade's ticker doesn't exist : Create new
-
-                    holding = {
-                      ticker: tradeObj.ticker,
-                      numShares: tradeObj.numShares,
-                    };
-                    Holdings.create(holding)
-                      .then((newHolding) => {
-                        console.log(`Holding Created for ${tradeObj.ticker}`);
-                      })
-                      .catch((err) => {
-                        res.statusCode = 402;
-                        res.json({
-                          message: err.message,
-                          error: err,
-                        });
-                      });
-                  } else {
-                    // If holding corresponding to the trade's ticker exist : Update no. shares
-
-                    holding.numShares = tradeObj.numShares + holding.numShares;
-                    holding.save((err) => {
-                      if (err) {
-                        res.statusCode = 402;
-                        res.json({
-                          message: err.message,
-                          error: err,
-                        });
-                      } else {
-                        console.log(`Holdings Updated for ${tradeObj.ticker}`);
-                      }
-                    });
+      utils.createTrade(tradeObj,(err,trade)=> 
+      {
+        if(err)
+        {
+          res.statusCode = 402;
+          res.json({
+            message: err.message,
+            error: err,
+          });
+          return;
+        }
+        // Adding No. of Shares in Holdings
+        Holdings.findOne({ ticker: tradeObj.ticker })
+          .then((holding) => 
+            {
+              if (!holding) {
+                // If holding corresponding to the trade's ticker doesn't exist : Create new
+                holding = {
+                  ticker: tradeObj.ticker,
+                  numShares: tradeObj.numShares,
+                };                   
+                utils.createHolding(holding,(err,newHolding)=> {
+                  if(err)
+                  {
+                    res.end("Could not create Holding");
+                    return;
                   }
-                },
-                (err) => {
+                });
+              } else {
+                // If holding corresponding to the trade's ticker exist : Update no. shares
+                holding.numShares = tradeObj.numShares + holding.numShares;
+                holding.save((err) => {
+                  if (err) {
+                    res.statusCode = 402;
+                    res.json({
+                      message: err.message,
+                      error: err,
+                    });
+                  } else {
+                    console.log(`Holdings Updated for ${tradeObj.ticker}`);
+                  }
+                });
+              }
+            },(err) => {
                   console.log("Error while searching Holding");
                   res.statusCode = 402;
                   res.json({
@@ -155,15 +147,16 @@ tradeRouter.route("/")
                     error: err,
                   });
                 }
-              )
-              .catch((err) => {
-                console.log("Error while searching Holding in catch");
-                res.statusCode = 402;
-                res.json({
-                  message: err.message,
-                  error: err,
-                });
+            )
+            .catch((err) => {
+              console.log("Error while searching Holding in catch");
+              res.statusCode = 402;
+              res.json({
+                message: err.message,
+                error: err,
               });
+              return;
+            });
             // Successful Holing and Trade Creation
             res.statusCode = 200;
             res.json({
@@ -174,23 +167,10 @@ tradeRouter.route("/")
                 buyPrice: trade.buyPrice,
               },
             });
-          },
-          (err) => {
-            res.statusCode = 402;
-            res.json({
-              message: err.message,
-              error: err,
-            });
-          }
-        )
-        .catch((err) => {
-          res.statusCode = 402;
-          res.json({
-            message: err.message,
-            error: err,
           });
-        });
-    } else if (tradeObj.operation == "sell") {
+    }
+    
+    else if (tradeObj.operation == "sell") {
       Holdings.findOne({ ticker: tradeObj.ticker }).then((holding) => {
         if (!holding) {
           // holding not present
@@ -295,81 +275,229 @@ tradeRouter.route("/")
       res.statusCode = 403;
       res.end("Option must be 'buy' or 'sell'");
     }
+  })
+  .delete((req,res,next)=> {
+    console.log("Deleting");
+    Trades.collection.drop();
+    Holdings.collection.drop();
+    res.end("Deleted All");
   });
+  
 
 tradeRouter.route("/:tradeID")
-.get((req,res,next) => {
-  
+  .get((req, res, next) => {
+    const tradeID = req.params.tradeID;
 
-  Trades.findById(tradeID)
-  .select('_id ticker numShares buyPrice operation createdAt')
-  .then((trade) => {
-    res.statusCode = 200;
-    res.json(trade);
-  },(err)=> {})
-  .catch((err) => {
+    Trades.findById(tradeID)
+      .select('_id ticker numShares buyPrice operation createdAt')
+      .then((trade) => {
+        res.statusCode = 200;
+        res.json(trade);
+      }, (err) => { })
+      .catch((err) => {
 
+      })
   })
-})
-.put((req,res,next) => {
-	const tradeID = req.params.tradeID;
-	const updateObj = req.body;
+  .put((req, res, next) => {
+    const tradeID = req.params.tradeID;
+    const updateObj = req.body;
 
-  console.log("PUT request received");
-  
-  Trades.findById(tradeID)
-	.then((trade)=> {
-    if(trade)
-    {
-      console.log(trade);
-      for(key in updateObj)
-		  {
-        console.log(key);
-        if(key=='ticker')
-        {
-          if(trade[key]!=updateObj[key])
-          {
-            console.log("TIcker not matching");
+    console.log("PUT request received");
+
+    Trades.findById(tradeID)
+      .then((trade) => {
+        if (trade) {
+          
+          /*
+             3 changes possible 
+
+             1. Change in Ticker
+             2. Change in Number of Shares
+             3. Change in Operation
+
+             Only 1 at a time is supprted as of now. 
+
+          */
+          
+          const updateTicker = updateObj.ticker;
+          const updateNumShares = updateObj.numShares;
+          const updateOperation = updateObj.operation;
+          if((!updateTicker) && (updateNumShares) && (!updateOperation))
+            {
+              if (trade.operation == 'buy') {
+
+                // For operation buy : update the trade
+                if (updateObj.numShares > 0) {
+                  var oldShares = trade.numShares;
+                  trade.numShares = updateObj.numShares;
+                  trade.numSharesBought = trade.numShares;
+                  var newShares = updateObj.numShares - oldShares;
+                  console.log(`Adding ${newShares} in holdings`);
+                  
+                  // Updating Holdings
+                  Holdings.findOneAndUpdate({ ticker: updateObj.ticker }, { $inc: { numShares: newShares } }, { new: true })
+                    .then((holding) => {                    
+                      trade.save((err) => {
+                        if (err) {
+                          res.statusCode = 403;
+                          res.end("Error while saving the trade");
+                          return;
+                        }
+                        res.statusCode=200;
+                        res.json(trade);
+                        return;
+                      })
+                    }, (err) => {
+                      res.statusCode = 403;
+                      res.json({
+                        message: err.message,
+                        error: err,
+                      });
+                    }
+                    )
+                    .catch((err) => {
+                      res.statusCode = 403;
+                      res.json({
+                        message: err.message,
+                        error: err,
+                      });
+                    });
+                }
+                else {
+                  res.statusCode=403;
+                  res.end("Number of shares should be more than 0 for updating");
+                }
+              }
+              else if (trade.operation == 'sell') {
+                console.log("Selling Update");
+                if (updateObj.numShares > 0) {
+                  var oldShares = trade.numShares;
+                  trade.numShares = updateObj.numShares;
+                  var newShares = oldShares - updateObj.numShares;
+                  console.log(`Removing ${newShares} in holdings`);
+                
+                  // Checking and Updating Holds
+                  Holdings.find({ ticker: trade.ticker})
+                    .then((holding) => {
+                      if(holding)
+                      {
+                        var updatedShares = holding.numShares + newShares;
+                        if(updatedShares>=0)
+                        {
+                          holding.numShares = updatedShares;
+                          if(holding.numShares==0)
+                          {
+                            Holdings.findOneAndDelete({ticker:trade.ticker})
+                            .then((holdDel)=>{
+                              console.log("Hold Deleted");
+                            })
+                            .catch((err)=> {
+                              res.statusCode = 403;
+                              res.json({
+                                message: err.message,
+                                error: err,
+                              });
+                              return;
+                            });
+                          }
+                          else {
+                          holding.save((err)=>{
+                            if(err)
+                              {
+                                res.statusCode = 403;
+                                res.json({
+                                  message: err.message,
+                                  error: err,
+                                });
+                              }
+                              else{
+                               console.log("Holding Updated Successfully"); 
+                               trade.numShares = updateObj.numShares;
+                               trade.save((err)=>{
+                                 if(err)
+                                 {
+                                  res.statusCode = 403;
+                                  
+                                 }
+                                 else{
+                                   res.statusCode=200;
+                                   res.end("Trade updated successfully");
+                                 }
+                               })
+                              }
+                            })
+                          }
+                        }
+                        else {
+                          res.statusCode=403;
+                          res.end(`Only ${holding.numShares} of ${holding.ticker} can be sold..`);
+                          return;
+                        }
+                      }     
+                },(err)=> {
+                  res.json({
+                    message: err.message,
+                    error: err,
+                  });
+                  return;
+                })
+                .catch((err)=> {
+                  res.json({
+                    message: err.message,
+                    error: err,
+                  });
+                  return;
+                })
+              }
+              else {
+                res.statusCode=403;
+                res.end("Number of shares should be more than 0 for updating");
+              }
+            }
           }
-          else {
-            res.end("Processing updated");
-          }	
-        }
-		  }
-    }
-		else {
-      res.end("No Trade found");
-    }
-	})
-})
-.delete((req,res,next) => {
-  const tradeID = req.params.tradeID;
-
-  Trades.findByIdAndRemove(tradeID)
-  .then((trade) => {
-    if(trade)
-    {
-      res.statusCode = 200;
-      res.end(`Trade with tradeID ${tradeID} removed successfully..!`);
-    }
-    else {
-      res.statusCode = 200;
-      res.end(`No trade Trade present with tradeID ${tradeID}.!`);
-    }
-  },(err) => {
-    res.statusCode = 403;
-    res.json({
-      message: err.message,
-      error: err,
-    });
+      
+        //   else if((updateTicker) && (!updateNumShares) && (!updateOperation))  
+              
+        //   Holdings.find(())
+        //     }
+            
+        //   }
+        // }
+        // else {
+        //   res.end("No Trade found");
+        // }
+      }
     })
-  .catch((err) => {
-    res.statusCode = 403;
-    res.json({
-      message: err.message,
-      error: err,
-    });
+  })
+  .delete((req, res, next) => {
+    const tradeID = req.params.tradeID;
+
+    Trades.findByIdAndRemove(tradeID)
+      .then((trade) => {
+        if (trade) {
+          res.statusCode = 200;
+          res.end(`Trade with tradeID ${tradeID} removed successfully..!`);
+        }
+        else {
+          res.statusCode = 200;
+          res.end(`No trade Trade present with tradeID ${tradeID}.!`);
+        }
+      }, (err) => {
+        res.statusCode = 403;
+        res.json({
+          message: err.message,
+          error: err,
+        });
+      })
+      .catch((err) => {
+        res.statusCode = 403;
+        res.json({
+          message: err.message,
+          error: err,
+        });
+      });
   });
-})
+
+
 
 module.exports = tradeRouter;

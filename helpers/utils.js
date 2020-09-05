@@ -1,7 +1,7 @@
 const constants = require('./constanst');
 var Holdings = require('../models/holding');
 var Trades = require('../models/trade');
-
+var chalk = require('chalk');
 function calculateAvgPrice(oldShares,oldPrice, newShares, newPrice)
 {
     var newSharesCount = oldShares + newShares;
@@ -40,7 +40,7 @@ async function findTrades(holds, callback)
         for(let i=0;i<holds.length;i++)
          {    
             var trades = await Trades.find({'ticker':holds[i].ticker,operation:"buy"})
-            calculateHolding(trades, (err,holdObjs)=> {
+            calculateHolding(trades,holds[i].numShares, (err,holdObjs)=> {
                 if(!err)
                 {
                     holdingList.push(holdObjs);
@@ -50,7 +50,7 @@ async function findTrades(holds, callback)
         callback(null,holdingList);
 }    
       
-function calculateHolding(trades, callback) {
+function calculateHolding(trades,currentHolds, callback) {
     var avgBuyPrice = 0;
     var totalShares = 0;
     for(let j=0;j<trades.length;j++)
@@ -64,15 +64,45 @@ function calculateHolding(trades, callback) {
     
     var holdObj = {
         "ticker" : trades[0].ticker,
-        "numShares" : totalShares,
+        "numShares" : currentHolds,
         "avgBuyPrice" : avgBuyPrice
     };
     callback(null, holdObj);
+}
+
+function createHolding(holding,callback)
+{
+    Holdings.create(holding)
+    .then((newHolding) => {
+        console.log(`Holding Created for ${newHolding.ticker}`);
+        callback(undefined,newHolding);
+
+    },(err)=> {
+        callback(err,undefined);
+    })
+    .catch((err) => {
+        callback(err,undefined);
+    });     
+}
+function createTrade(tradeObj,callback)
+{   
+    Trades.create(tradeObj)
+    .then((trade)=> {
+        console.log(chalk.green(`${trade.numShares} shares of ${trade.ticker} baught successfully !!`));
+        callback(undefined,trade);
+    },(err)=> {
+        callback(err,undefined);
+    })
+    .catch((err)=> {
+        callback(err,undefined);
+    })   
 }
 
 module.exports = {
     calculateAvgPrice : calculateAvgPrice,
     calculateReturns : calculateReturns,
     getHoldings:getHoldings,
-    findTrades: findTrades
+    findTrades: findTrades,
+    createHolding : createHolding,
+    createTrade : createTrade
 }

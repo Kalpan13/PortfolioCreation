@@ -44,7 +44,7 @@ var app = express();
 //app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
-mongoose.connect(MONGO_URI, { useNewUrlParser:true , useUnifiedTopology: true })
+mongoose.connect(MONGO_URI, { useNewUrlParser:true , useUnifiedTopology: true,  useFindAndModify: false  })
     .then(()=> console.log('MongoDB connected'))
     .catch((err) => console.log(err));
 
