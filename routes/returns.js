@@ -5,10 +5,12 @@ var utils = require('../helpers/utils');
 
 returnRouter.route('/')
 .get((req,res,next) => {
-   
+   // Fetching holdings
     utils.getHoldings((err,holds)=> {
+        // Fetch corresponding trades
         utils.findTrades(holds,(err,holdList) =>{
             if(!err) {
+                // Calculate Returns
                 var returns = utils.calculateReturns(holdList);
                 res.statusCode = 200;
                 res.json({

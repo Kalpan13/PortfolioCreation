@@ -7,8 +7,10 @@ var utils = require('../helpers/utils');
 holdingRouter.route('/')
 
 .get((req,res,next) => {
-
+    // fetch holdings
     utils.getHoldings((err,holds)=> {
+        // fetch corresponding trades
+        
         utils.findTrades(holds,(err,holdList) =>{
             if(!err)
             {

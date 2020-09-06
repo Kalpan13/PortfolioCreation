@@ -1,17 +1,11 @@
+// Contains utility function used in different routes
+
 const constants = require('./constanst');
 var Holdings = require('../models/holding');
 var Trades = require('../models/trade');
-var chalk = require('chalk');   
-function calculateAvgPrice(oldShares,oldPrice, newShares, newPrice)
-{
-    var newSharesCount = oldShares + newShares;
-    var avgBuyPrice = ((oldPrice * oldShares)+(newShares*newPrice))/newSharesCount;
-    return {
-        newAvgBuyPrice:avgBuyPrice,
-        newShares:newSharesCount
-    }
-}
+var chalk = require('chalk');  
 
+// To Calculate Returns value
 function calculateReturns(trades)
 {
     var returns = 0;
@@ -23,6 +17,8 @@ function calculateReturns(trades)
     return returns;
 
 }
+// To fetch all the holdings
+
 async function getHoldings(callback)
 {
     Holdings.find({},(err,holds) => {
@@ -34,6 +30,7 @@ async function getHoldings(callback)
         }   
     });
 }
+// To find all the trades of given ticker of hold
 async function findTrades(holds, callback) 
 {   
         var holdingList = [];
@@ -49,14 +46,14 @@ async function findTrades(holds, callback)
         }
         callback(null,holdingList);
 }    
-      
+// Calculate holding values (avgBuyPrice, totalShares)
 function calculateHolding(trades,currentHolds, callback) {
     var avgBuyPrice = 0;
     var totalShares = 0;
     for(let j=0;j<trades.length;j++)
     {   
         var buyPrice = trades[j].buyPrice;
-        var numSharesBought = trades[j].numSharesBought;
+        var numSharesBought = trades[j].numShares;
         avgBuyPrice += (buyPrice * numSharesBought);
         totalShares +=numSharesBought;
     }
@@ -69,7 +66,7 @@ function calculateHolding(trades,currentHolds, callback) {
     };
     callback(null, holdObj);
 }
-
+// Create a new holding
 function createHolding(holding,callback)
 {
     Holdings.create(holding)
@@ -84,6 +81,8 @@ function createHolding(holding,callback)
         callback(err,undefined);
     });     
 }
+// Create a new trade
+
 function createTrade(tradeObj,callback)
 {   
     Trades.create(tradeObj)
@@ -96,7 +95,7 @@ function createTrade(tradeObj,callback)
         callback(err,undefined);
     })   
 }
-
+// Update holding with given trade detail
 function updateHolding(tradeObj,callback)
 {
     Holdings.findOne({ ticker: tradeObj.ticker })
@@ -139,6 +138,7 @@ function updateHolding(tradeObj,callback)
             callback(err,null);     
         });
 }
+// Check if given shares can be sold or not
 function checkShares(sharesSell,ticker,callback) 
 {
     Holdings.findOne({ticker : ticker})
@@ -160,13 +160,14 @@ function checkShares(sharesSell,ticker,callback)
         callback(err,null,null,null);
     })
 }
+
 module.exports = {
-    calculateAvgPrice : calculateAvgPrice,
+
     calculateReturns : calculateReturns,
     getHoldings:getHoldings,
     findTrades: findTrades,
     createHolding : createHolding,
     createTrade : createTrade,
     updateHolding : updateHolding,
-    checkShares : checkShares
+    checkShares : checkShares,
 }
