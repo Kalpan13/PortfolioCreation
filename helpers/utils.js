@@ -1,7 +1,7 @@
 const constants = require('./constanst');
 var Holdings = require('../models/holding');
 var Trades = require('../models/trade');
-var chalk = require('chalk');
+var chalk = require('chalk');   
 function calculateAvgPrice(oldShares,oldPrice, newShares, newPrice)
 {
     var newSharesCount = oldShares + newShares;
@@ -88,7 +88,6 @@ function createTrade(tradeObj,callback)
 {   
     Trades.create(tradeObj)
     .then((trade)=> {
-        console.log(chalk.green(`${trade.numShares} shares of ${trade.ticker} baught successfully !!`));
         callback(undefined,trade);
     },(err)=> {
         callback(err,undefined);
@@ -98,11 +97,76 @@ function createTrade(tradeObj,callback)
     })   
 }
 
+function updateHolding(tradeObj,callback)
+{
+    Holdings.findOne({ ticker: tradeObj.ticker })
+        .then((holding) => {
+            if (!holding) {
+            // If holding corresponding to the trade's ticker doesn't exist : Create new
+                holding = {
+                    ticker: tradeObj.ticker,
+                    numShares: tradeObj.numShares,
+                };                   
+                createHolding(holding,(err,newHolding)=> {
+                    if(err)
+                    {
+                        callback(err,null);
+                    }
+                    else {
+                        callback(null,null);
+                    }
+                });
+            } 
+            else {
+                // If holding corresponding to the trade's ticker exist : Update no. shares
+                holding.numShares = tradeObj.numShares + holding.numShares;
+                holding.save((err) => {
+                    if (err) {
+                        callback(err,null);
+                    } else {
+                        console.log(`Holdings Updated for ${tradeObj.ticker}`);
+                        callback(null,null);
+                    }
+                });
+            }
+        },(err) => {
+                console.log("Error while searching Holding");     
+                callback(err,null);
+            }
+        )
+        .catch((err) => {
+            console.log("Error while searching Holding in catch");
+            callback(err,null);     
+        });
+}
+function checkShares(sharesSell,ticker,callback) 
+{
+    Holdings.findOne({ticker : ticker})
+    .then((holding)=> {
+        if(!holding)
+        {
+            callback("No Holdings Found",null,null,null);
+        }
+        else{
+            if(holding.numShares>=sharesSell)
+                callback(null,true,holding.numShares,holding);
+            else
+                callback(null,false,holding.numShares,holding);    
+        }
+    },(err)=> {
+        callback(err,null,null,null);
+    })
+    .catch((err)=> {
+        callback(err,null,null,null);
+    })
+}
 module.exports = {
     calculateAvgPrice : calculateAvgPrice,
     calculateReturns : calculateReturns,
     getHoldings:getHoldings,
     findTrades: findTrades,
     createHolding : createHolding,
-    createTrade : createTrade
+    createTrade : createTrade,
+    updateHolding : updateHolding,
+    checkShares : checkShares
 }

@@ -7,7 +7,10 @@ const tradeScehma = new mongoose.Schema({
     },
     buyPrice : {
         type : Number,
-        min:0
+        min:0,
+        required : function() {
+                    return this.operation == 'buy';
+                    }   
     },
     numShares : {
         type : Number,

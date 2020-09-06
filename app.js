@@ -3,8 +3,13 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-var swaggerUI = require('swagger-ui-express');
-var swaggerJsDoc = require('swagger-jsdoc');
+var swaggerUi = require('swagger-ui-express');
+
+
+var swaggerUi = require('swagger-ui-express'),
+    swaggerDocument = require('./swagger/swagger.json');
+
+
 var mongoose = require('mongoose');
 const dotenv = require('dotenv')
 dotenv.config();
@@ -44,7 +49,9 @@ var app = express();
 //app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
-mongoose.connect(MONGO_URI, { useNewUrlParser:true , useUnifiedTopology: true,  useFindAndModify: false  })
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+mongoose.connect("mongodb+srv://Kalpan:Kalpan@131998@portfolio-anlysis.jvi9d.mongodb.net/Portfolio-Creation?retryWrites=true&w=majority"
+, { useNewUrlParser:true , useUnifiedTopology: true,  useFindAndModify: false  })
     .then(()=> console.log('MongoDB connected'))
     .catch((err) => console.log(err));
 
