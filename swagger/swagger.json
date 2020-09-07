@@ -100,7 +100,7 @@
         }
       }
     },
-    "/trade/{tradeID}": {
+    "/trades/{tradeID}": {
       "get": {
         "tags": [
           "trade"
