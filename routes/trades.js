@@ -175,7 +175,7 @@ tradeRouter.route("/")
   
     Trades.collection.drop();
     Holdings.collection.drop();
-    res.end("Deleted All");
+    res.end("Deleted all the trades");
   });
   
 
