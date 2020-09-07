@@ -290,12 +290,16 @@ tradeRouter.route("/:tradeID")
                   var newShares = oldShares - updateObj.numShares;
                 
                   // Checking and Updating Holds
-                  Holdings.find({ ticker: trade.ticker})
+                  console.log(trade.ticker);
+                  Holdings.findOne({ticker: trade.ticker})
                     .then((holding) => {
+                      console.log(holding);
                       if(holding)
                       {
                         var updatedShares = holding.numShares + newShares;
                         // If available shares in hold are more than to_be_sold share : perform update
+                        console.log(updatedShares);
+                        
                         if(updatedShares>=0)
                         {
                           holding.numShares = updatedShares;
@@ -495,6 +499,7 @@ tradeRouter.route("/:tradeID")
 
                         console.log("Holding removed for trade :"+holding.ticker);
                         trade.operation='sell';
+                        delete trade['buyPrice'];
                         trade.save((err)=>{
                           if(err)
                           {
