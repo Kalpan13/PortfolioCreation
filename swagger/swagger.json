@@ -8,7 +8,7 @@
       "email": "kalpantumdi@gmail.com"
     }
   },
-  "host": "https://portfolio-app-kt.herokuapp.com",
+  "host": "portfolio-app-kt.herokuapp.com",
   "basePath": "/",
   "tags": [
     {
