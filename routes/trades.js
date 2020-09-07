@@ -826,11 +826,88 @@ tradeRouter.route("/:tradeID")
   .delete((req, res, next) => {
     const tradeID = req.params.tradeID;
 
-    Trades.findByIdAndRemove(tradeID)
+    Trades.findById(tradeID)
       .then((trade) => {
         if (trade) {
-          res.statusCode = 200;
-          res.end(`Trade with tradeID ${tradeID} removed successfully..!`);
+      
+          Holdings.findOne({ticker:trade.ticker})
+          .then((holding)=> {
+            var newShares = trade.operation=='buy'?-trade.numShares:trade.numShares;
+            
+            console.log(holding.numShares);
+            if((holding.numShares+newShares)>0)
+            {
+              holding.numShares = holding.numShares+newShares;
+              holding.save((err)=> {
+                if(err)
+                {
+                  res.statusCode=403;
+                  res.json(({
+                    message : err.message,
+                    error : err
+                  }));
+                }
+                else
+                {
+                  Trades.findByIdAndDelete(tradeID,(err)=>{
+                    if(err)
+                    {
+                      res.statusCode=403;
+                      res.json(({
+                        message : err.message,
+                        error : err
+                      }));
+                    }
+                    else{
+                      res.statusCode=200;
+                      res.json(({
+                        message : "Trade Deleted Successfully"
+                      }));
+                    }
+                  });
+                }
+              })
+            }
+            else if((holding.numShares+newShares)==0)
+            {
+              Holdings.deleteOne({ticker:trade.ticker},(err)=>{
+                if(err)
+                {
+                  res.statusCode=403;
+                  res.json(({
+                    message : err.message,
+                    error : err
+                  }));
+                }
+                else{
+                  Trades.findByIdAndDelete(tradeID,(err)=>{
+                    if(err)
+                    {
+                      res.statusCode=403;
+                      res.json(({
+                        message : err.message,
+                        error : err
+                      }));
+                    }
+                    else{
+                      res.statusCode=200;
+                      res.json(({
+                        message : "Trade Deleted Successfully"
+                      }));
+                    }
+                  });
+                  
+                }
+              })
+            
+            }
+            else{
+              res.statusCode=403;
+              res.json(({
+                message : "Trade can not be deleted because, remaining shares in holdings are less than the numShares in trade"
+              }));
+            }
+          })
         }
         else {
           res.statusCode = 200;
